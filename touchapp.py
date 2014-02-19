@@ -4,6 +4,7 @@ kivy.require('1.0.8')
 from kivy.core.window import Window
 from kivy.uix.widget import Widget
 from pygame import midi
+from midiutil.MidiFile3 import MIDIFile
 
 class MyKeyboardListener(Widget):
 
@@ -53,60 +54,69 @@ class MyKeyboardListener(Widget):
         keys[row2[i]] = bass[i] + 24
         keys[row1[i]] = bass[i] + 36
 
-
-
-
     global active
     active = set()
 
-
-    # global key
-    # key = set()
-    # key.add(1)
     midi.init()
     global player
     player = midi.Output(0)
     # player.set_instrument(48,1)
     player.set_instrument(1,1)
 
+    global tempo
+    tempo = 120 # make dynamic later
+    track = 0
+    channel = 0
+    pitch = 60
+    time = 0
+    duration = 1
+    volume = 100
 
+    global MyMIDI
+    MyMIDI = MIDIFile(1)
+    MyMIDI.addTrackName(track,time,"Recording")
+    MyMIDI.addTempo(track,time,tempo)
+
+    #MyMIDI.addNote(track,channel,pitch,time,duration,volume)
+
+    global noteinfo
+    noteinfo = dict()
+
+    # timeMIDI = tempo / 60000 * time
+    # durationMIDI = tempo / 60000 * time_difference
+
+    global initial
+    initial = True
     def _on_keyboard_down(self, keyboard, keycode, text, modifiers):
-        print('The key', keycode, 'have been pressed')
-        print(' - text is %r' % text)
-        print(' - modifiers are %r' % modifiers)
-
         # Keycode is composed of an integer + a string
         # If we hit escape, release the keyboard
+        global initial
+        if initial:
+            initial = False
+            midi.init()
         if keycode[1] == 'escape':
             keyboard.release()
 
-
-        # note = keycode[0] - 52
-        # if modifiers:
-        #     note += 12
-        # if note not in key:
-        #     key.add(note)
-        #     player.note_on(note,127,1)
+            binfile = open("output" + str(midi.time()) + ".mid",'wb')
+            MyMIDI.writeFile(binfile)
+            binfile.close()
         if keycode[0] in keys.keys() and keycode[0] not in active:
             player.note_on(keys[keycode[0]],127,1)
             active.add(keycode[0])
 
 
+            noteinfo[keycode[0],'time'] = tempo / 60000 * midi.time()
+
         # Return True to accept the key. Otherwise, it will be used by
         # the system.
         return True
     def _on_keyboard_up(self,keyboard,keycode):
-        # print('The key', keycode, 'haveddd been pressed')
-        # note = keycode[0] -52
-        # if note in key:
-        #     player.note_off(note,127,1)
-        #     key.remove(note)
-        # if note + 12 in key:
-        #     player.note_off(note+12,127,1)
-        #     key.remove(note+12)
         if keycode[0] in active and keycode[0] in keys.keys():
             player.note_off(keys[keycode[0]],127,1)
             active.remove(keycode[0])
+
+            time = noteinfo[keycode[0],'time']
+            MyMIDI.addNote(0,0,keys[keycode[0]],time,(tempo / 60000 * midi.time())-time,100)
 
 if __name__ == '__main__':
     from kivy.base import runTouchApp
