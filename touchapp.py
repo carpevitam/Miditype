@@ -23,7 +23,7 @@ class MyKeyboardListener(Widget):
         self._keyboard.unbind(on_key_down=self._on_keyboard_down)
         self._keyboard = None
 
-    key = set()
+    key = 0
     midi.init()
     global player
     player = midi.Output(0)
@@ -39,9 +39,6 @@ class MyKeyboardListener(Widget):
         if keycode[1] == 'escape':
             keyboard.release()
 
-        note = keycode[0] - 52
-        if modifiers:
-            note += 12
         global key
         key = keycode[0] - 52
         if modifiers:
