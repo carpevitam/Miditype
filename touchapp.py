@@ -6,7 +6,14 @@ from kivy.uix.widget import Widget
 from pygame import midi
 from midiutil.MidiFile3 import MIDIFile
 
-class MyKeyboardListener(Widget):
+from kivy.properties import NumericProperty, ObjectProperty
+
+from kivy.uix.boxlayout import BoxLayout
+class Lay(BoxLayout):
+    pass
+
+
+class MyKeyboardListener(Widget):  
 
     def __init__(self, **kwargs):
         super(MyKeyboardListener, self).__init__(**kwargs)
@@ -19,6 +26,7 @@ class MyKeyboardListener(Widget):
         self._keyboard.bind(on_key_down=self._on_keyboard_down)
         self._keyboard.bind(on_key_up=self._on_keyboard_up)
 
+
     def _keyboard_closed(self):
         print('My keyboard have been closed!')
         self._keyboard.unbind(on_key_down=self._on_keyboard_down)
@@ -29,6 +37,7 @@ class MyKeyboardListener(Widget):
     row2 = [113,119,101,114,116,121,117,105,111,112,91,93,92]#qwertyuiop[]\
     row3 = [97,115,100,102,103,104,106,107,108,59,39]#asdfghjkl;'
     row4 = [122,120,99,118,98,110,109,44,46,47]#zxcvbnm,./
+
 
     # global keys
     # keys = dict()
@@ -63,8 +72,11 @@ class MyKeyboardListener(Widget):
     # player.set_instrument(48,1)
     player.set_instrument(1,1)
 
+    global start_time
+    start_time = 0
+    te = NumericProperty(23);
     global tempo
-    tempo = 120 # make dynamic later
+    tempo = 60 # make dynamic later
     track = 0
     channel = 0
     pitch = 60
@@ -84,16 +96,19 @@ class MyKeyboardListener(Widget):
 
     # timeMIDI = tempo / 60000 * time
     # durationMIDI = tempo / 60000 * time_difference
-
+    noteVAL = NumericProperty(0)
+    def update(self,dt):
+        noteVAL = NumericProperty(0)
+        if (active):
+            noteVAL = list(active)[0]
     global initial
     initial = True
     def _on_keyboard_down(self, keyboard, keycode, text, modifiers):
         # Keycode is composed of an integer + a string
         # If we hit escape, release the keyboard
         global initial
-        if initial:
-            initial = False
-            midi.init()
+        global start_time
+        
         if keycode[1] == 'escape':
             keyboard.release()
 
@@ -101,11 +116,14 @@ class MyKeyboardListener(Widget):
             MyMIDI.writeFile(binfile)
             binfile.close()
         if keycode[0] in keys.keys() and keycode[0] not in active:
+            if initial:
+                initial = False
+                start_time = midi.time()
+
             player.note_on(keys[keycode[0]],127,1)
             active.add(keycode[0])
 
-
-            noteinfo[keycode[0],'time'] = tempo / 60000 * midi.time()
+            noteinfo[keycode[0],'time'] = tempo / 60000 * (midi.time()-start_time)
 
         # Return True to accept the key. Otherwise, it will be used by
         # the system.
@@ -116,7 +134,61 @@ class MyKeyboardListener(Widget):
             active.remove(keycode[0])
 
             time = noteinfo[keycode[0],'time']
-            MyMIDI.addNote(0,0,keys[keycode[0]],time,(tempo / 60000 * midi.time())-time,100)
+            MyMIDI.addNote(0,0,keys[keycode[0]],time,(tempo / 60000 * (midi.time()-start_time))-time,100)
+
+    def on_touch_up(self,touch): 
+        print(self.width)
+        print(self.height)
+
+        partition = self.width / 10;
+        tempDict = {}
+        if touch.y < self.height / 2:
+            temp = [122,120,99,118,98,  97,115,100,102,103] 
+        else:
+            temp = [110,109,44,46,47,104,106,107,108,59,39]
+        for i in range(10):
+            tempDict[i] = temp[i]
+            # tempDict[i] = keys.keys()[i]
+        if int(touch.x*10/self.width) in tempDict.keys() and tempDict[int(touch.x*10/self.width)] in active:
+            note = tempDict[int(touch.x*10/self.width)]
+            player.note_off(keys[note],127,1)
+            active.remove(note)
+
+
+            time = noteinfo[note,'time']
+            MyMIDI.addNote(0,0,keys[note],time,(tempo / 60000 * (midi.time()-start_time))-time,100)
+            # noteinfo[tempDict[int(touch.x*10/self.width)],'time'] = tempo / 60000 * (midi.time()-start_time)
+
+
+    def on_touch_down(self,touch): # need to implement gliss
+
+        partition = self.width / 10;
+        tempDict = {}
+        if touch.y < self.height / 2:
+            temp = [122,120,99,118,98,  97,115,100,102,103] 
+        else:
+            temp = [110,109,44,46,47,104,106,107,108,59,39]
+        for i in range(10):
+            tempDict[i] = temp[i]
+            # tempDict[i] = keys.keys()[i]
+        if int(touch.x*10/self.width) in tempDict.keys() and tempDict[int(touch.x*10/self.width)] not in active:
+            note = tempDict[int(touch.x*10/self.width)]
+            player.note_on(keys[note],127,1)
+            active.add(note)
+            noteinfo[note,'time'] = tempo / 60000 * (midi.time()-start_time)
+        # if keycode[0] in keys.keys() and keycode[0] not in active:
+
+        #     player.note_on(keys[keycode[0]],127,1)
+        #     active.add(keycode[0])
+
+        #     noteinfo[keycode[0],'time'] = tempo / 60000 * (midi.time()-start_time)
+
+
+
+        if touch.x > 400:
+            player.note_off(60,127,1)
+    def precision_algorithm():
+        pass
 
 if __name__ == '__main__':
     from kivy.base import runTouchApp
