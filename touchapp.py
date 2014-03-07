@@ -9,6 +9,10 @@ from midiutil.MidiFile3 import MIDIFile
 from kivy.properties import NumericProperty, ObjectProperty
 
 from kivy.uix.boxlayout import BoxLayout
+
+
+
+# TEST LAYOUT
 class Lay(BoxLayout):
     pass
 
@@ -32,37 +36,25 @@ class MyKeyboardListener(Widget):
         self._keyboard.unbind(on_key_down=self._on_keyboard_down)
         self._keyboard = None
 
-
-    row1 = [49,50,51,52,53,54,55,56,57,48,45,61] #1234567890-=
-    row2 = [113,119,101,114,116,121,117,105,111,112,91,93,92]#qwertyuiop[]\
-    row3 = [97,115,100,102,103,104,106,107,108,59,39]#asdfghjkl;'
-    row4 = [122,120,99,118,98,110,109,44,46,47]#zxcvbnm,./
-
-
-    # global keys
-    # keys = dict()
-    # num = 48 #goes til 83
-    # for key in row4:
-    #     keys[key] = num
-    #     num += 1
-    # for key in row3:
-    #     keys[key] = num
-    #     num += 1
-    # for key in row2:
-    #     keys[key] = num
-    #     num += 1
-    # keys[49] = 82
-    # keys[50] = 83
-
+    # KEY SETUP
     global keys
     keys = dict()
-    bass = [48, 50, 52, 53, 55, 57, 59, 60]
-    for i in range(8):
-        keys[row4[i]] = bass[i]
-        keys[row3[i]] = bass[i] + 12
-        keys[row2[i]] = bass[i] + 24
-        keys[row1[i]] = bass[i] + 36
 
+    try:
+        f = open('keyconfig','r+')
+    except:
+        #default
+        f = open('keyconfig-default','r+')
+        pass
+    for line in f:
+        if line.startswith('###') or line.startswith('\n'):
+            pass
+        else:
+            keys[ord(line[:-1].split(' ')[0])] = int(line[:-1].split(' ')[1])
+    print(keys)
+
+    # INITIALIZE MIDI INFORMATION
+    ###################################################################################
     global active
     active = set()
 
@@ -103,6 +95,7 @@ class MyKeyboardListener(Widget):
             noteVAL = list(active)[0]
     global initial
     initial = True
+    ###################################################################################
     def _on_keyboard_down(self, keyboard, keycode, text, modifiers):
         # Keycode is composed of an integer + a string
         # If we hit escape, release the keyboard
@@ -128,6 +121,7 @@ class MyKeyboardListener(Widget):
         # Return True to accept the key. Otherwise, it will be used by
         # the system.
         return True
+
     def _on_keyboard_up(self,keyboard,keycode):
         if keycode[0] in active and keycode[0] in keys.keys():
             player.note_off(keys[keycode[0]],127,1)
