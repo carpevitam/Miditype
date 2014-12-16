@@ -55,4 +55,4 @@ target/
 
 # Manually added
 # MIDI files
-.mid
+*.mid
